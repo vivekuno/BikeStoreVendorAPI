@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BikeStoreVendor.API.Model\BikeStoreVendor.API.Model.csproj" />
+    <ProjectReference Include="..\BikeStoreVendor.Data.Access\BikeStoreVendor.Data.Access.csproj" />
+    <ProjectReference Include="..\BikeStoreVendor.Data.Model\BikeStoreVendor.Data.Model.csproj" />
+  </ItemGroup>
+
+</Project>
