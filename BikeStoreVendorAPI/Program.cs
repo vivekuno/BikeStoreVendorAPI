@@ -1,3 +1,4 @@
+using BikeStoreVendor.API.Middelware;
 using BikeStoreVendor.Data.Access;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -24,6 +25,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseMiddleware<BasicAuth>();
 app.UseHttpsRedirection();
 
 app.UseAuthorization();
