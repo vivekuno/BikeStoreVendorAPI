@@ -40,4 +40,4 @@ namespace BikeStoreVendor.API.Model
         public int Quantity { get; set; }
     }
 
-}
+    }

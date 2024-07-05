@@ -3,6 +3,8 @@ using BikeStoreVendor.Data.Access;
 using BikeStoreVendor.Data.Model;
 using Dapper;
 using Microsoft.Data.SqlClient;
+using System.Data;
+using System.Data.Common;
 
 namespace BikeStoreVendor.BL
 {
@@ -55,6 +57,86 @@ namespace BikeStoreVendor.BL
                 "SET category_name = @catname " +
                 "WHERE category_id = @catid;", dynamicParameters);
             return result;
+
+        }
+
+        public async Task<int> InsertProductOnCategory(ProductCategory productCategory)
+        {
+            try
+            {
+                // Fetch category_id using category name
+                var categoryIdQuery = "SELECT category_id FROM production.categories WHERE category_name = @CategoryName";
+                var categoryParams = new DynamicParameters();
+                categoryParams.Add("@CategoryName", productCategory.CategoryName, DbType.String);
+                var categoryId = _dapper.Get<int>(categoryIdQuery, categoryParams, CommandType.Text);
+
+                if (categoryId == 0)
+                {
+                    // Category not found
+                    return categoryId;
+                }
+
+                // Fetch store_id using store name
+                var storeIdQuery = "SELECT store_id FROM sales.stores WHERE store_name = @StoreName";
+                var storeParams = new DynamicParameters();
+                storeParams.Add("@StoreName", productCategory.ProductInfo.StoreName, DbType.String);
+                var storeId = _dapper.Get<int>(storeIdQuery, storeParams, CommandType.Text);
+
+                if (storeId == 0)
+                {
+                    // Store not found
+                    return 0;
+                }
+
+                var brandIdQuery = "SELECT brand_id FROM production.brands WHERE brand_name = @BrandName";
+                var brandParams = new DynamicParameters();
+                brandParams.Add("@BrandName", productCategory.ProductInfo.Brand, DbType.String);
+                var brandId = _dapper.Get<int>(brandIdQuery, brandParams, CommandType.Text);
+
+                if (brandId == 0)
+                {
+                    // Brand not found, abort operation
+                    return brandId;
+                }
+
+
+                var insertProductQuery = @"
+                    INSERT INTO production.products (product_name, brand_id, category_id, model_year, list_price)
+                    VALUES (@ProductName, @BrandId, @CategoryId, @ModelYear, @ListPrice);
+                    SELECT CAST(SCOPE_IDENTITY() as int)";
+
+                var productParams = new DynamicParameters();
+                productParams.Add("@ProductName", productCategory.ProductInfo.ProductName, DbType.String);
+                productParams.Add("@BrandId", brandId, DbType.Int32);
+                productParams.Add("@CategoryId", categoryId, DbType.Int32);
+                productParams.Add("@ModelYear", productCategory.ProductInfo.ModelYear, DbType.Int16);
+                productParams.Add("@ListPrice", productCategory.ProductInfo.ListPrice, DbType.Decimal);
+
+                var productId = _dapper.Get<int>(insertProductQuery, productParams, CommandType.Text);
+
+                // Update stocks quantity
+                var updateStockQuery = @"
+                    UPDATE production.stocks
+                    SET quantity = quantity + @Quantity
+                    WHERE store_id = @StoreId AND product_id = @ProductId";
+
+                var stockParams = new DynamicParameters();
+                stockParams.Add("@Quantity", productCategory.ProductInfo.TotalQuantity, DbType.Int32);
+                stockParams.Add("@StoreId", storeId, DbType.Int32);
+                stockParams.Add("@ProductId", productId, DbType.Int32);
+
+                int record = _dapper.Get<int>(updateStockQuery, stockParams, CommandType.Text);
+
+                
+                
+                return record;
+            }
+            catch
+            {
+                // Rollback transaction in case of error
+                
+                return 0;
+            }
 
         }
     }

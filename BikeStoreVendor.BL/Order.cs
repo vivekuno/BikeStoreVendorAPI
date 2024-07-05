@@ -72,9 +72,32 @@ namespace BikeStoreVendor.BL
 
 
                             _dapper.Get<int>(@"INSERT INTO sales.order_items (order_id, item_id, product_id, quantity, list_price) 
-                          VALUES (@OrderId, @ItemId, @ProductId, @Quantity, (Select top 1 list_price from production.products where product_id=@ProductId))", dapperDyna, CommandType.Text);//, transaction);
+                          VALUES (@OrderId, @ItemId, @ProductId, @Quantity, (
+                             Select 
+                                  case when list_price > (select TRY_CAST(discount_cat_value AS DECIMAL(10, 2)) from sales.discount where discount_cat='amount')
+	                                   then FLOOR(list_price - (list_price * (select [percentage] from sales.discount where discount_cat='amount') / 100.0))
+	                               	 else list_price 
+	                        	 end as list_price 
+                                 from production.products  where product_id=@ProductId
+                           ))", dapperDyna, CommandType.Text);//, transaction);
 
                         }
+
+                        dapperDyna = new Dapper.DynamicParameters();
+                        dapperDyna.Add("@OrderId", orderId);
+                       
+                        //Enter credit 
+                        var credited = _dapper.Get<int>(@"INSERT INTO sales.customer_credit (order_id, customer_id, amount)
+                                                         SELECT 
+                                                             o.order_id,
+                                                             o.customer_id,
+                                                             FLOOR(SUM(oi.list_price - oi.discount) / 1000) * 10 AS credit_amount
+                                                         FROM 
+                                                             sales.order_items oi join sales.orders o on oi.order_id=o.order_id 
+                                                         WHERE
+                                                             o.order_id = 1619
+                                                         GROUP BY
+                                                             o.order_id, o.customer_id",dapperDyna, CommandType.Text);
 
                         //transaction.Commit();
                         return true;

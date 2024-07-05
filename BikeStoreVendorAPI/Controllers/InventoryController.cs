@@ -40,6 +40,21 @@ namespace BikeStoreVendor.API.Controllers
 
         }
 
+        [HttpPost]
+        public string InsertProductOnCategory(ProductCategory productCategory)
+        {
+            BL.Inventory inventory = new BL.Inventory(_dapper);
+            int insert = inventory.InsertProductOnCategory(productCategory).Result;
+            if (insert == 1)
+            {
+                return "Product inserted " + insert;
+            }
+            else
+            {
+                return "No product inserted, incorrect product info";
+            }
+        }
+
         [HttpPut]
         public string UpdateCategory(Categories category)
         {
